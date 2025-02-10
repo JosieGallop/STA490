@@ -1,0 +1,211 @@
+---
+title: "STA 321 Logistic Regression Project: Predicting a Patient's Odds of CHD"
+subtitle: '<img src="img/wcu.png" width=90 height=100>'
+author: 
+  - "Josie Gallop"
+date: '`r Sys.Date()`'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: true
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("pander")) {
+   install.packages("pander")
+   library(pander)
+}
+if (!require("plotly")) {
+   install.packages("plotly")
+   library(plotly)
+}
+if (!require("ggplot2")) {
+   install.packages("ggplot2")
+   library(ggplot2)
+}
+knitr::opts_chunk$set(
+                  fig.width=3, 
+                  fig.height=3, 
+                  fig.retina=12,
+                  out.width = "100%",
+                  cache = FALSE,
+                  echo = TRUE,
+                  message = FALSE, 
+                  warning = FALSE,
+                  hiline = TRUE
+                  )
+```
+
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+  style_duo_accent(primary_color = "#b988f9",
+          secondary_color = "#f1c0fc",
+          # fonts
+          header_font_google = google_font("Martel"),
+          text_font_google = google_font("Lato"),
+          code_font_google = google_font("Fira Mono"))
+```
+
+
+
+
+class:inverse4, top
+
+<h1 align="center"> Agenda </h1>
+<BR>
+
+
+- Binary Predictive Modeling 
+   - Logistic Regression
+- Introduction
+   - Variables
+   - Practical Questions
+- Exploratory Data Analysis
+- Three Candidate Models
+   - Full Model 
+   - Reduced Model
+   - Forward Selection Model
+- Model Selection Process
+   - Cross Validation
+   - ROC Analysis
+- Conclusion and Recommendations
+
+---
+
+<h1 align="center"> Introduction </h1>
+<BR>
+
+- Data found on kaggle.com (Dileep, 2019).
+- Ongoing cardiovascular study in Framingham, Massachussetts.
+    - 4,238 observations of 16 variables.
+- Various personal and medical risk factors. 
+- Create a logistic regression model which predicts the odds of a patient being at risk for developing CHD in a 10 year period.
+- Three candidate models:
+    - Full model
+    - Reduced model
+    - Forward selection model
+
+
+
+---
+
+<h1 align="center"> Variables  </h1>
+<BR>
+
+.pull-left[
+- gender
+- age 
+- education
+- currentSmoker
+- cigsPerDay
+- BPMeds
+- prevalentStroke
+- prevalentHyp
+- diabetes
+]
+
+.pull-right[
+- totChol
+- sysBP
+- diaBP
+- BMI 
+- heartRate
+- glucose 
+- TenYearCHD(binary response variables)
+    - 0 = "no" and 1 = "yes"
+]
+
+
+
+---
+
+class: inverse3 center middle 
+
+# First Few Entries of the Data Set 
+
+```{r  echo=FALSE}
+heartdisease <- read.csv("https://raw.githubusercontent.com/JosieGallop/STA321/refs/heads/main/dataset/framingham.csv", header=TRUE)
+
+DT::datatable(head(heartdisease), fillContainer = FALSE, options = list(pageLength = 4))
+```
+
+
+---
+
+class: inverse1 center middle 
+
+## **sysBP** Distribution
+
+```{r echo=FALSE, fig.align='center', out.width = '600px'}
+par(bg = '#430661', col.axis="white")
+ylimit = max(density(heartdisease$sysBP)$y)
+  hist(heartdisease$sysBP, probability = TRUE, xlab="sysBP", main="sysBP Distribution", 
+     cex.main=0.8, 
+     cex.lab=0.8,
+     col.axis = "white",
+     col.main = "white",
+     col.lab = "white",
+     col.sub="white",
+     col.tick="white",
+     col = '#430661', 
+     border = "white")
+axis(2,col="white")
+axis(1,col="white")
+```
+
+
+
+---
+
+
+class: inverse1 center middle 
+
+## **diaBP** Distribution
+
+
+```{r echo=FALSE, fig.align='center', out.width = '600px'}
+par(bg = '#430661', col.axis="white")
+ylimit = max(density(heartdisease$diaBP)$y)
+  hist(heartdisease$diaBP, probability = TRUE, xlab="diaBP", main="diaBP Distribution", 
+     cex.main=0.8, 
+     cex.lab=0.8,
+     col.axis = "white",
+     col.main = "white",
+     col.lab = "white",
+     col.sub="white",
+     col.tick="white",
+     col = '#430661', 
+     border = "white")
+axis(2,col="white")
+axis(1,col="white")
+```
+
+
+
+
+
+
+---
+
+
+class: inverse1 center middle 
+
+# Complete Table of the Data Set
+
+```{r echo=FALSE, comment=NA}
+tibble::as_tibble(heartdisease)
+```
+
+
+
