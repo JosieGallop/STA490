@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>STA 321 Logistic Regression Project: Predicting a Patient’s Odds of CHD</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Josie Gallop, Chloe Winters, Ava Destefano" />
+    <meta name="date" content="2025-02-16" />
+    <script src="Week4GroupPresentation_files/header-attrs/header-attrs.js"></script>
+    <script src="Week4GroupPresentation_files/htmlwidgets/htmlwidgets.js"></script>
+    <link href="Week4GroupPresentation_files/datatables-css/datatables-crosstalk.css" rel="stylesheet" />
+    <script src="Week4GroupPresentation_files/datatables-binding/datatables.js"></script>
+    <script src="Week4GroupPresentation_files/jquery/jquery-3.6.0.min.js"></script>
+    <link href="Week4GroupPresentation_files/dt-core/css/jquery.dataTables.min.css" rel="stylesheet" />
+    <link href="Week4GroupPresentation_files/dt-core/css/jquery.dataTables.extra.css" rel="stylesheet" />
+    <script src="Week4GroupPresentation_files/dt-core/js/jquery.dataTables.min.js"></script>
+    <link href="Week4GroupPresentation_files/crosstalk/css/crosstalk.min.css" rel="stylesheet" />
+    <script src="Week4GroupPresentation_files/crosstalk/js/crosstalk.min.js"></script>
+    <link rel="stylesheet" href="https://chloewinters79.github.io/STA490/Presentation/Group%20Presentation/xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# STA 321 Logistic Regression Project: Predicting a Patient’s Odds of CHD
+]
+.subtitle[
+## <img src="img/wcu.png" width=90 height=100>
+]
+.author[
+### Josie Gallop, Chloe Winters, Ava Destefano
+]
+.date[
+### 2025-02-16
+]
+
+---
+
+
+
+
+
+
+
+
+&lt;!-- Start of Josie's Slides  --&gt;
+
+
+# Agenda 
+
+&lt;font size = 5&gt;
+
+.pull-left[
+- Binary Predictive Modeling 
+   - Logistic Regression
+- Introduction
+   - Variables
+   - Practical Questions
+- Exploratory Data Analysis
+- Three Candidate Models
+   - Full Model 
+   - Reduced Model
+   - Forward Selection Model
+- Model Selection Process
+   - Cross Validation
+   - ROC Analysis
+- Conclusion and Recommendations
+]
+&lt;BR&gt;
+&lt;BR&gt;
+&lt;/font&gt;
+
+---
+
+# Introduction
+
+&lt;font size = 5&gt;
+
+.pull-left[
+- Data found on kaggle.com (Dileep, 2019). 
+- Ongoing cardiovascular study in Framingham, Massachussetts. 
+    - 4,238 observations of 16 variables. 
+- Various personal and medical risk factors. 
+- Logistic regression model 
+    - Odds of a patient being at risk for developing CHD in a 10 year period.
+- Three candidate models: 
+    - Full model 
+    - Reduced model 
+    - Forward selection model
+  ]
+&lt;BR&gt;
+&lt;BR&gt;
+&lt;/font&gt;
+
+---
+
+## Variables 
+
+&lt;font size = 6&gt;
+
+.pull-left[
+- gender
+- age 
+- education
+- currentSmoker
+- cigsPerDay
+- BPMeds
+- prevalentStroke
+- prevalentHyp
+- diabetes
+]
+
+.pull-right[
+- totChol
+- sysBP
+- diaBP
+- BMI 
+- heartRate
+- glucose 
+- TenYearCHD(binary response variables)
+    - 0 = "no" and 1 = "yes"
+]
+
+&lt;BR&gt;
+&lt;BR&gt;
+&lt;/font&gt;
+
+---
+
+## First Few Entries of the Data Set 
+
+
+
+
+<div class="datatables html-widget html-fill-item" id="htmlwidget-bdff4926d29077dd5213" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-bdff4926d29077dd5213">{"x":{"filter":"none","vertical":false,"fillContainer":false,"data":[["1","2","3","4","5","6"],[1,0,1,0,0,0],[39,46,48,61,46,43],[4,2,1,3,3,2],[0,0,1,1,1,0],[0,0,20,30,23,0],[0,0,0,0,0,0],[0,0,0,0,0,0],[0,0,0,1,0,1],[0,0,0,0,0,0],[195,250,245,225,285,228],[106,121,127.5,150,130,180],[70,81,80,95,84,110],[26.97,28.73,25.34,28.58,23.1,30.3],[80,95,75,65,85,77],[77,76,70,103,85,99],[0,0,0,1,0,0]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>male<\/th>\n      <th>age<\/th>\n      <th>education<\/th>\n      <th>currentSmoker<\/th>\n      <th>cigsPerDay<\/th>\n      <th>BPMeds<\/th>\n      <th>prevalentStroke<\/th>\n      <th>prevalentHyp<\/th>\n      <th>diabetes<\/th>\n      <th>totChol<\/th>\n      <th>sysBP<\/th>\n      <th>diaBP<\/th>\n      <th>BMI<\/th>\n      <th>heartRate<\/th>\n      <th>glucose<\/th>\n      <th>TenYearCHD<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"pageLength":4,"columnDefs":[{"className":"dt-right","targets":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]},{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"male","targets":1},{"name":"age","targets":2},{"name":"education","targets":3},{"name":"currentSmoker","targets":4},{"name":"cigsPerDay","targets":5},{"name":"BPMeds","targets":6},{"name":"prevalentStroke","targets":7},{"name":"prevalentHyp","targets":8},{"name":"diabetes","targets":9},{"name":"totChol","targets":10},{"name":"sysBP","targets":11},{"name":"diaBP","targets":12},{"name":"BMI","targets":13},{"name":"heartRate","targets":14},{"name":"glucose","targets":15},{"name":"TenYearCHD","targets":16}],"order":[],"autoWidth":false,"orderClasses":false,"lengthMenu":[4,10,25,50,100]}},"evals":[],"jsHooks":[]}</script>
+
+
+---
+
+
+## Fixing the Missing Values 
+
+&lt;font size = 6&gt; 
+
+.pull-left[
+- Some variables contain missing values 
+- Fix this with multiple imputation 
+  - Use the MICE function
+- Fixes the missing value problem 
+]
+&lt;BR&gt;
+&lt;BR&gt;
+&lt;/font&gt;
+
+
+
+
+---
+
+## Correcting the Variable Types
+
+
+&lt;font size = 6&gt; 
+
+.pull-left[
+- Some incorrect variable types in the data set
+- cigsPerDay: change to numeric
+- age: change to numeric
+- BPMeds: change to integer
+- education: change to character
+]
+&lt;BR&gt;
+&lt;BR&gt;
+&lt;/font&gt;
+
+
+
+
+---
+
+
+class:inverse1 middle center
+name:storytelling
+
+
+# Visualizations of Quantitative Variable Distributions
+
+
+
+---
+
+## **sysBP** Distribution
+
+&lt;img src="Week4GroupPresentation_files/figure-html/unnamed-chunk-5-1.png" width="600px" style="display: block; margin: auto;" /&gt;
+
+
+
+---
+
+## **diaBP** Distribution
+
+
+&lt;img src="Week4GroupPresentation_files/figure-html/unnamed-chunk-6-1.png" width="600px" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## **cigsPerDay** Distribution
+
+&lt;img src="Week4GroupPresentation_files/figure-html/unnamed-chunk-7-1.png" width="600px" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+# Complete Table of the Data Set
+
+
+```
+## # A tibble: 4,238 × 16
+##     male   age education currentSmoker cigsPerDay BPMeds prevalentStroke
+##    &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;             &lt;int&gt;      &lt;dbl&gt;  &lt;int&gt;           &lt;int&gt;
+##  1     1    39 4                     0          0      0               0
+##  2     0    46 2                     0          0      0               0
+##  3     1    48 1                     1         20      0               0
+##  4     0    61 3                     1         30      0               0
+##  5     0    46 3                     1         23      0               0
+##  6     0    43 2                     0          0      0               0
+##  7     0    63 1                     0          0      0               0
+##  8     0    45 2                     1         20      0               0
+##  9     1    52 1                     0          0      0               0
+## 10     1    43 1                     1         30      0               0
+## # ℹ 4,228 more rows
+## # ℹ 9 more variables: prevalentHyp &lt;int&gt;, diabetes &lt;int&gt;, totChol &lt;dbl&gt;,
+## #   sysBP &lt;dbl&gt;, diaBP &lt;dbl&gt;, BMI &lt;dbl&gt;, heartRate &lt;dbl&gt;, glucose &lt;dbl&gt;,
+## #   TenYearCHD &lt;int&gt;
+```
+
+
+&lt;!-- End of Josie's Slides  --&gt;
+
+
+
+
+
+
+
+&lt;!-- Start of Chloes Slides  --&gt;
+
+
+---
+
+
+
+
+
+
+
+
+
+
+
+## ROC Curve
+
+&lt;img src="Week4GroupPresentation_files/figure-html/unnamed-chunk-13-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## ROC Analysis 
+
+&lt;font size = 6&gt;
+
+- An AUC value closer to 1 indicates ideal performance &lt;BR&gt;
+&lt;BR&gt;
+- The reduced model has the lowest AUC &lt;BR&gt;
+&lt;BR&gt;
+- This contradicts previous findings &lt;BR&gt;
+&lt;BR&gt;
+- Possible issue with false positives and negatives &lt;BR&gt;
+&lt;BR&gt;
+- Forward selection looks like a good choice &lt;BR&gt;
+&lt;BR&gt;
+
+&lt;/font&gt;
+
+---
+
+# Conclusion
+
+&lt;font size = 6&gt;
+
+- Reduced model has the best performance reducing the PEs &lt;BR&gt;
+&lt;BR&gt;
+- Using the AUC, forward selection model was best &lt;BR&gt;
+&lt;BR&gt;
+- Less variables could have caused false positives &amp; negatives &lt;BR&gt;
+
+
+&lt;/font&gt;
+
+---
+
+## Recommendations &amp; Limitations
+
+&lt;font size = 6&gt;
+
+- Expand data collection &lt;BR&gt;
+&lt;BR&gt;
+- Consider other variables - income and family history &lt;BR&gt;
+&lt;BR&gt;
+- Consider other candidate models &lt;BR&gt;
+&lt;BR&gt;
+- Investigate potential false positives and negatives &lt;BR&gt;
+
+&lt;/font&gt;
+
+---
+
+## Final Statements
+
+&lt;font size = 6&gt;
+
+- Benefits in using reduced and forward selection models &lt;BR&gt;
+&lt;BR&gt;
+  - Lower PE in reduced model &lt;BR&gt;
+  &lt;BR&gt;
+  - Higher AUC in forward selection model &lt;BR&gt;
+  &lt;BR&gt;
+-Potential false positives and negatives &lt;BR&gt;
+&lt;BR&gt;
+- Both models provide important information regarding risk of CHD &lt;BR&gt;
+
+&lt;/font&gt;
+
+---
+
+# References
+
+&lt;font size = 6&gt;
+
+- Dileep. (2019, June 7). Logistic regression to predict heart disease. Kaggle. https://www.kaggle.com/datasets/dileep070/heart-disease-prediction-using-logistic-regression?resource=download&amp;select=framingham.csv &lt;BR&gt;
+
+&lt;BR&gt;
+
+- Hajar, R. (2017). Risk factors for coronary artery disease: Historical perspectives. Heart views : the official journal of the Gulf Heart Association. https://pmc.ncbi.nlm.nih.gov/articles/PMC5686931/ &lt;BR&gt;
+
+
+&lt;/font&gt;
+
+---
+
+class: center, middle
+
+# Q &amp; A
+
+
+---
+
+# Credits
+
+&lt;font size = 6&gt;
+
+- Josie Gallop, Slides XX - XX &lt;BR&gt;
+&lt;BR&gt;
+- Ava Destefano, Slides XX - XX &lt;BR&gt;
+&lt;BR&gt;
+- Chloe Winters, Slides XX- XX &lt;BR&gt;
+&lt;BR&gt;
+&lt;/font&gt;
+
+
+---
+name: Thank you
+class: inverse1 center, middle
+
+# Thank you!
+
+Slides created using R packages:
+
+[**xaringan**](https://github.com/yihui/xaringan)&lt;br&gt;
+[**gadenbuie/xaringanthemer**](https://github.com/gadenbuie/xaringanthemer)&lt;br&gt;
+[**knitr**](http://yihui.name/knitr)&lt;br&gt;
+[**R Markdown**](https://rmarkdown.rstudio.com)&lt;br&gt;
+via &lt;br&gt;
+[**RStudio Desktop**](https://posit.co/download/rstudio-desktop/)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "%current%",
+"highlightStyle": "github",
+"highlightLines": true,
+"ratio": "16:9",
+"countIncrementalSlides": true
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

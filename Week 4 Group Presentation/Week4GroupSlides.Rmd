@@ -1,0 +1,780 @@
+---
+title: "STA 321 Logistic Regression Project: Predicting a Patient's Odds of CHD"
+subtitle: '<img src="https://chloewinters79.github.io/STA490/Image/wcu.png" width=90 height=100>'
+author: 
+  - "Josie Gallop, Chloé Winters, Ava Destefano"
+date: '`r Sys.Date()`'
+output:
+  xaringan::moon_reader:
+    css: "https://chloewinters79.github.io/STA490/Presentation/Group%20Presentation/xaringan-themer.css"
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: true
+      
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("leaflet")) {
+   install.packages("leaflet")
+   library(leaflet)
+}
+if (!require("EnvStats")) {
+   install.packages("EnvStats")
+   library(EnvStats)
+}
+if (!require("MASS")) {
+   install.packages("MASS")
+   library(MASS)
+}
+if (!require("phytools")) {
+   install.packages("phytools")
+   library(phytools)
+}
+if(!require("dplyr")) {
+   install.packages("dplyr")
+   library(dplyr)
+}
+if(!require("tidyverse")) {
+   install.packages("tidyverse")
+   library(tidyverse)
+}
+if(!require("GGally")) {
+   install.packages("GGally")
+   library(GGally)
+}
+if(!require("usdm")) {
+   install.packages("usdm")
+   library(usdm)
+}
+if(!require("car")) {
+   install.packages("car")
+   library(car)
+}
+if (!require("boot")) {
+   install.packages("boot")
+   library(boot)
+}
+if(!require("pander")) {
+   install.packages("pander")
+   library(pander)
+}
+if(!require("mice")) {
+   install.packages("mice")
+   library(mice)
+}
+if(!require("mlbench")) {
+   install.packages("mlbench")
+   library(mlbench)
+}
+if(!require("psych")) {
+   install.packages("psych")
+   library(psych)
+}
+if(!require("broom.mixed")) {
+   install.packages("broom.mixed")
+   library(broom.mixed)
+}
+if(!require("GGally")) {
+   install.packages("GGally")
+   library(GGally)
+}
+if(!require("caret")) {
+   install.packages("caret")
+   library(caret)
+}
+if (!require("pROC")) {
+   install.packages("pROC")
+   library(pROC)
+}
+knitr::opts_chunk$set(
+                  fig.width=3, 
+                  fig.height=3, 
+                  fig.retina=12,
+                  out.width = "100%",
+                  cache = FALSE,
+                  echo = TRUE,
+                  message = FALSE, 
+                  warning = FALSE,
+                  hiline = TRUE
+                  )
+```
+
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+  style_duo_accent(primary_color = "#b988f9",
+          secondary_color = "#f1c0fc",
+          # fonts
+          header_font_google = google_font("Martel"),
+          text_font_google = google_font("Lato"),
+          code_font_google = google_font("Fira Mono"))
+```
+
+
+<!-- Start of Josie's Slides  -->
+
+
+# Agenda 
+
+<font size = 5>
+
+.pull-left[
+- Binary Predictive Modeling 
+   - Logistic Regression
+- Introduction
+   - Variables
+   - Practical Questions
+- Exploratory Data Analysis
+- Three Candidate Models
+   - Full Model 
+   - Reduced Model
+   - Forward Selection Model
+- Model Selection Process
+   - Cross Validation
+   - ROC Analysis
+- Conclusion and Recommendations
+]
+<BR>
+<BR>
+</font>
+
+---
+
+# Introduction
+
+<font size = 5>
+
+.pull-left[
+- Data found on kaggle.com (Dileep, 2019). 
+- Ongoing cardiovascular study in Framingham, Massachussetts. 
+    - 4,238 observations of 16 variables. 
+- Various personal and medical risk factors. 
+- Logistic regression model 
+    - Odds of a patient being at risk for developing CHD in a 10 year period.
+- Three candidate models: 
+    - Full model 
+    - Reduced model 
+    - Forward selection model
+  ]
+<BR>
+<BR>
+</font>
+
+---
+
+## Variables 
+
+<font size = 6>
+
+.pull-left[
+- gender
+- age 
+- education
+- currentSmoker
+- cigsPerDay
+- BPMeds
+- prevalentStroke
+- prevalentHyp
+- diabetes
+]
+
+.pull-right[
+- totChol
+- sysBP
+- diaBP
+- BMI 
+- heartRate
+- glucose 
+- TenYearCHD(binary response variables)
+    - 0 = "no" and 1 = "yes"
+]
+
+<BR>
+<BR>
+</font>
+
+---
+
+## First Few Entries of the Data Set 
+
+```{r,  include=FALSE}
+heartdisease <- read.csv("https://raw.githubusercontent.com/JosieGallop/STA321/refs/heads/main/dataset/framingham.csv", header=TRUE)
+```
+
+
+```{r, echo = FALSE}
+DT::datatable(head(heartdisease), fillContainer = FALSE, options = list(pageLength = 4))
+```
+
+
+---
+
+
+## Fixing the Missing Values 
+
+<font size = 6> 
+
+.pull-left[
+- Some variables contain missing values 
+- Fix this with multiple imputation 
+  - Use the MICE function
+- Fixes the missing value problem 
+]
+<BR>
+<BR>
+</font>
+
+```{r,  include=FALSE}
+set.seed(1)
+mice <- mice(heartdisease, method = "cart")
+heartdisease1 <-mice::complete(mice,2) 
+```
+
+
+---
+
+## Correcting the Variable Types
+
+
+<font size = 6> 
+
+.pull-left[
+- Some incorrect variable types in the data set
+- cigsPerDay: change to numeric
+- age: change to numeric
+- BPMeds: change to integer
+- education: change to character
+]
+<BR>
+<BR>
+</font>
+
+```{r,  include=FALSE}
+heartdisease1$cigsPerDay <- as.numeric(heartdisease1$cigsPerDay)
+heartdisease1$age <- as.numeric(heartdisease1$age)
+heartdisease1$BPMeds <- as.integer(heartdisease1$BPMeds)
+heartdisease1$education <- as.character(heartdisease1$education)
+```
+
+
+---
+
+
+class:inverse1 middle center
+name:storytelling
+
+
+# Visualizations of Quantitative Variable Distributions
+
+
+
+---
+
+## **sysBP** Distribution
+
+```{r echo=FALSE, fig.align='center', out.width = '600px'}
+par(bg = '#430661', col.axis="white")
+ylimit = max(density(heartdisease1$sysBP)$y)
+  hist(heartdisease1$sysBP, probability = TRUE, xlab="sysBP", main="sysBP Distribution", 
+     cex.main=0.8, 
+     cex.lab=0.8,
+     col.axis = "white",
+     col.main = "white",
+     col.lab = "white",
+     col.sub="white",
+     col.tick="white",
+     col = '#430661', 
+     border = "white")
+axis(2,col="white")
+axis(1,col="white")
+```
+
+
+
+---
+
+## **diaBP** Distribution
+
+
+```{r echo=FALSE, fig.align='center', out.width = '600px'}
+par(bg = '#430661', col.axis="white")
+ylimit = max(density(heartdisease1$diaBP)$y)
+  hist(heartdisease1$diaBP, probability = TRUE, xlab="diaBP", main="diaBP Distribution", 
+     cex.main=0.8, 
+     cex.lab=0.8,
+     col.axis = "white",
+     col.main = "white",
+     col.lab = "white",
+     col.sub="white",
+     col.tick="white",
+     col = '#430661', 
+     border = "white")
+axis(2,col="white")
+axis(1,col="white")
+```
+
+
+---
+
+## **cigsPerDay** Distribution
+
+```{r echo=FALSE, fig.align='center', out.width = '600px'}
+par(bg = '#430661', col.axis="white")
+ylimit = max(density(heartdisease1$cigsPerDay)$y)
+  hist(heartdisease1$cigsPerDay, probability = TRUE, xlab="cigsPerDay", main="cigsPerDay Distribution", 
+     cex.main=0.8, 
+     cex.lab=0.8,
+     col.axis = "white",
+     col.main = "white",
+     col.lab = "white",
+     col.sub="white",
+     col.tick="white",
+     col = '#430661', 
+     border = "white")
+axis(2,col="white")
+axis(1,col="white")
+```
+
+
+---
+
+# Complete Table of the Data Set
+
+```{r, echo = FALSE}
+tibble::as_tibble(heartdisease1)
+```
+
+
+<!-- End of Josie's Slides  -->
+
+---
+
+
+class: inverse1 center top 
+
+## Pairwise Scatterplot Analysis
+
+```{r echo=FALSE, fig.align='center', out.width = '500px'}
+heartdisease <- read.csv("https://raw.githubusercontent.com/JosieGallop/STA321/refs/heads/main/dataset/framingham.csv", header=TRUE)
+
+heart.num <- select(heartdisease, "cigsPerDay", "totChol", "sysBP", "diaBP", "BMI", "heartRate", "glucose")
+pairs.panels(heart.num, 
+             method = "pearson", 
+             hist.col = "#430661",
+             density = TRUE, 
+             ellipses = TRUE 
+             )
+```
+---
+
+class:inverse4, top
+
+<h1 align="Left"> Variable Standardization </h1>
+
+- Now all **numeric** variables will be standardized
+
+- This will increase predictive power
+
+```{r include=FALSE}
+heartdisease0 <- heartdisease
+
+colSums(is.na(heartdisease0))
+
+set.seed(1)
+mice <- mice(heartdisease0, method = "cart")
+heartdisease1 <-mice::complete(mice,2) 
+
+```
+
+```{r echo=FALSE}
+# Age
+heartdisease1$sd.age = (heartdisease1$age-mean(heartdisease1$age))/sd(heartdisease1$age)
+
+# cigsPerDay
+heartdisease1$sd.cigsPerDay = (heartdisease1$cigsPerDay-mean(heartdisease1$cigsPerDay))/sd(heartdisease1$cigsPerDay)
+
+# totChol
+heartdisease1$sd.totChol = (heartdisease1$totChol-mean(heartdisease1$totChol))/sd(heartdisease1$totChol)
+
+# sysBP
+heartdisease1$sd.sysBP = (heartdisease1$sysBP-mean(heartdisease1$sysBP))/sd(heartdisease1$sysBP)
+
+# diaBP
+heartdisease1$sd.diaBP = (heartdisease1$diaBP-mean(heartdisease1$diaBP))/sd(heartdisease1$diaBP)
+
+# BMI
+heartdisease1$sd.BMI = (heartdisease1$BMI-mean(heartdisease1$BMI))/sd(heartdisease1$BMI)
+
+# heartRate
+heartdisease1$sd.heartRate = (heartdisease1$heartRate-mean(heartdisease1$heartRate))/sd(heartdisease1$heartRate)
+
+# glucose
+heartdisease1$sd.glucose = (heartdisease1$glucose-mean(heartdisease1$glucose))/sd(heartdisease1$glucose)
+```
+
+
+
+
+---
+
+class:inverse4, top
+
+<h1 align="Left"> New Data Set </h1>
+
+- Create a final data set called **heartdisease**
+
+- Replaces old variables with standardized ones
+
+-Essential for model building
+
+
+```{r echo=FALSE}
+# New data set with original, non-standardized variables dropped.
+sd.heartdisease = select(heartdisease1, -2,-5,-10:-15)
+```
+
+---
+<h1 align="Left"> Data Split </h1>
+
+- Spilt the data into two groups
+
+- 80% for training
+
+- 20% for testing
+
+- Training data will be used for building our models
+```{r echo=FALSE}
+
+n <- dim(sd.heartdisease)[1]
+train.n <- round(0.8*n)
+train.id <- sample(1:n, train.n, replace = FALSE)
+
+train <- sd.heartdisease[train.id, ]
+test <- sd.heartdisease[-train.id, ]
+```
+---
+class:inverse middle center
+name:model building
+
+
+# Model Building Process
+
+
+---
+<h1 align="Center"> Full Model </h1>
+
+- Includes all variables
+
+<h3 align="center"> Full Model Equation: </h3>
+
+$$
+log p/(1-p) = -2.2024 + 0.4852 * male + 0.5169 * sd.age - 0.2356 * education2 - 0.1026 * education3 + 0.0115 * education4 + 0.0219 * currentSmoker+ 0.2507 * sd.cigsPerDay + 0.3270 * BPMeds + 0.9389 * prevalentStroke + 0.2312 * prevalentHyp + 0.0912 * diabetes + 0.0803 * sd.totChol + 0.3075 * sd.sysBP - 0.0327 * sd.diaBP + 0.0071 * sd.BMI - 0.0137 * sd.heartRate + 0.1730 * sd.glucose
+$$
+
+---
+<h5 align="Left"> Full Model of Summary Statistics </h5>
+
+```{r echo=FALSE, out.width = '500px'}
+full.model = glm(TenYearCHD ~ male + sd.age + education + currentSmoker + sd.cigsPerDay + BPMeds + prevalentStroke + prevalentHyp + diabetes + sd.totChol + sd.sysBP + sd.diaBP + sd.BMI + sd.heartRate + sd.glucose, 
+          family = binomial(link = "logit"),  
+          data = sd.heartdisease)  
+kable(summary(full.model)$coef)
+```
+
+---
+<h1 align="Center"> Reduced Model </h1>
+
+- Includes the variables "current smoker", "sd.cigsperday", "sd.sysBP", "sd.diaBP", "sd.totalChol". 
+
+<h3 align="center"> Reduced Model Equation: </h3>
+
+$$
+log p/(1-p) = -1.7675 - 0.1443 * currentSmoker + 0.2683 * sd.cigsPerDay + 0.6381 * sd.sysBP - 0.1409 * sd.diaBP + 0.1114 * sd.totChol
+$$
+
+---
+<h1 align="Left"> Reduced Model </h1>
+
+
+```{r echo=FALSE}
+reduced.model = glm(TenYearCHD ~ currentSmoker + sd.cigsPerDay + sd.sysBP + sd.diaBP + sd.totChol, 
+          family = binomial(link = "logit"),
+          data = sd.heartdisease) 
+kable(summary(reduced.model)$coef, 
+      caption = "Reduced Model Summary of the Inferential Statistics")
+```
+
+---
+<h1 align="Center"> Stepwise Model </h1>
+
+- Uses forward regression
+
+- - Includes the variables "current smoker", "sd.cigsperday", "sd.sysBP", "sd.diaBP", "sd.totalChol", "sd.age, "male", "sd.glucose", "prevalentStroke", "prevalentHyp", and "BPMeds". 
+
+
+<h3 align="center"> Stepwise Model Equation: </h3>
+
+$$
+log p/(1-p) = -2.2898 + 0.0084 * currentSmoker + 0.2497 * sd.cigsPerDay + 0.2497 * sd.sysBP - 0.0325 * sd.diaBP + 0.0755 * sd.totChol + 0.5364 * sd.age + 0.5164 * male + 0.1826 * sd.glucose + 0.9413 * prevalentStroke + 0.2310 * prevalentHyp + 0.3233 * BPMeds 
+$$
+---
+<h1 align="Left"> Stepwise Model Summary Statistics </h1>
+
+```{r echo=FALSE}
+fs.model = stepAIC(reduced.model, scope = list(lower=formula(reduced.model), upper=formula(full.model)),
+                      direction = "forward",  
+                      trace = 0   
+                      )
+kable(summary(fs.model)$coef)
+```
+
+
+<!-- Start of Chloes Slides  -->
+
+
+---
+
+```{r, echo=FALSE, results='hide'}
+# Age
+heartdisease1$sd.age = (heartdisease1$age-mean(heartdisease1$age))/sd(heartdisease1$age)
+
+# cigsPerDay
+heartdisease1$sd.cigsPerDay = (heartdisease1$cigsPerDay-mean(heartdisease1$cigsPerDay))/sd(heartdisease1$cigsPerDay)
+
+# totChol
+heartdisease1$sd.totChol = (heartdisease1$totChol-mean(heartdisease1$totChol))/sd(heartdisease1$totChol)
+
+# sysBP
+heartdisease1$sd.sysBP = (heartdisease1$sysBP-mean(heartdisease1$sysBP))/sd(heartdisease1$sysBP)
+
+# diaBP
+heartdisease1$sd.diaBP = (heartdisease1$diaBP-mean(heartdisease1$diaBP))/sd(heartdisease1$diaBP)
+
+# BMI
+heartdisease1$sd.BMI = (heartdisease1$BMI-mean(heartdisease1$BMI))/sd(heartdisease1$BMI)
+
+# heartRate
+heartdisease1$sd.heartRate = (heartdisease1$heartRate-mean(heartdisease1$heartRate))/sd(heartdisease1$heartRate)
+
+# glucose
+heartdisease1$sd.glucose = (heartdisease1$glucose-mean(heartdisease1$glucose))/sd(heartdisease1$glucose)
+# New data set with original, non-standardized variables dropped.
+sd.heartdisease = select(heartdisease1, -2,-5,-10:-15)
+```
+
+
+```{r, echo=FALSE, results='hide'}
+# Split the data into 80% training and 20% testing.
+n <- dim(sd.heartdisease)[1]
+train.n <- round(0.8*n)
+train.id <- sample(1:n, train.n, replace = FALSE)
+
+train <- sd.heartdisease[train.id, ]
+test <- sd.heartdisease[-train.id, ]
+```
+
+```{r, echo=FALSE, results='hide'}
+TPR.FPR=function(pred){
+  prob.seq = seq(0, 1, length=50)  
+  pn = length(prob.seq)
+  true.lab = as.vector(train$TenYearCHD)
+  TPR = NULL
+  FPR = NULL
+  for (i in 1:pn){
+   pred.lab = as.vector(ifelse(pred > prob.seq[i],"1", "0"))
+   TPR[i] = length(which(true.lab=="1" & pred.lab=="1"))/length(which(true.lab=="1"))
+   FPR[i] = length(which(true.lab=="0" & pred.lab=="1"))/length(which(true.lab=="0"))
+  }
+ cbind(FPR = FPR, TPR = TPR)
+}
+```
+
+
+```{r, echo=FALSE, results='hide'}
+# The Full Model
+full.model = glm(TenYearCHD ~male + sd.age + education + currentSmoker +  sd.cigsPerDay + BPMeds + prevalentStroke + prevalentHyp + diabetes + sd.totChol + sd.sysBP + sd.diaBP + sd.BMI + sd.heartRate + sd.glucose, 
+          family = binomial(link = "logit"),  
+          data = train)
+
+# The Reduced Model (final model)
+reduced.model = glm(TenYearCHD ~ currentSmoker + sd.cigsPerDay + sd.sysBP + sd.diaBP + sd.totChol, 
+          family = binomial(link = "logit"),
+          data = train) 
+
+# The Forward Selection (fs) Model
+fs.model = stepAIC(full.model, 
+                      scope = list(lower=formula(reduced.model),   
+                      upper=formula(full.model)),
+                      direction = "forward",  
+                      trace = 0   
+                      )
+
+# Finding the Predicted Probabilities for Each Model
+pred.full = predict.glm(full.model, newdata = train, type = "response") 
+pred.reduced = predict.glm(reduced.model, newdata = train, type = "response")
+pred.fs = predict.glm(fs.model, newdata = train, type = "response")
+```
+
+## ROC Curve
+
+```{r fig.width=8, fig.asp=0.45, fig.align="center", echo=FALSE}
+# Plotting the ROC curves
+par(mar=c(3, 3, 1, 1))  
+par(mai = c(0.5, 0.5, 0.2, 0.2))
+ plot(TPR.FPR(pred.full)[,1], TPR.FPR(pred.full)[,2], 
+      type="l", col = 2, lty = 1, xlim = c(0,1), ylim = c(0,1),
+      xlab = "FPR: 1 - Specificity",
+      ylab ="TPR: Sensitivity",
+      main = "ROC Curves for the Three Candidate Models",
+      cex.main = 0.8,
+      col.main = "navy")
+ lines(TPR.FPR(pred.reduced)[,1], TPR.FPR(pred.reduced)[,2],  col=3, lty=2)
+ lines(TPR.FPR(pred.fs)[,1], TPR.FPR(pred.fs)[,2],  col=4, lty=3)    
+ 
+  category = train$TenYearCHD == "1"
+  ROCobj01 <- roc(category, as.vector(pred.full))
+  ROCobj02 <- roc(category, as.vector(pred.reduced))
+  ROCobj03 <- roc(category, as.vector(pred.fs))
+  AUC01 = round(auc(ROCobj01),4)
+  AUC02 = round(auc(ROCobj02),4)
+  AUC03 = round(auc(ROCobj03),4)
+  
+  legend("bottomright", c(paste("Full model: AUC = ", AUC01), 
+                         paste("Reduced model: AUC =", AUC02),
+                         paste("Forward Selection model: AUC =", AUC03)),
+        col = 2:4, lty = 1:3, cex = 0.8, bty = "n")
+```
+
+
+---
+
+## ROC Analysis 
+
+<font size = 6>
+
+- An AUC value closer to 1 indicates ideal performance <BR>
+<BR>
+- The reduced model has the lowest AUC <BR>
+<BR>
+- This contradicts previous findings <BR>
+<BR>
+- Possible issue with false positives and negatives <BR>
+<BR>
+- Forward selection looks like a good choice <BR>
+<BR>
+
+</font>
+
+---
+
+# Conclusion
+
+<font size = 6>
+
+- Reduced model has the best performance reducing the PEs <BR>
+<BR>
+- Using the AUC, forward selection model was best <BR>
+<BR>
+- Less variables could have caused false positives & negatives <BR>
+
+
+</font>
+
+---
+
+## Recommendations & Limitations
+
+<font size = 6>
+
+- Expand data collection <BR>
+<BR>
+- Consider other variables - income and family history <BR>
+<BR>
+- Consider other candidate models <BR>
+<BR>
+- Investigate potential false positives and negatives <BR>
+
+</font>
+
+---
+
+## Final Statements
+
+<font size = 6>
+
+- Benefits in using reduced and forward selection models <BR>
+<BR>
+  - Lower PE in reduced model <BR>
+  <BR>
+  - Higher AUC in forward selection model <BR>
+  <BR>
+-Potential false positives and negatives <BR>
+<BR>
+- Both models provide important information regarding risk of CHD <BR>
+
+</font>
+
+---
+
+# References
+
+<font size = 6>
+
+- Dileep. (2019, June 7). Logistic regression to predict heart disease. Kaggle. https://www.kaggle.com/datasets/dileep070/heart-disease-prediction-using-logistic-regression?resource=download&select=framingham.csv <BR>
+
+<BR>
+
+- Hajar, R. (2017). Risk factors for coronary artery disease: Historical perspectives. Heart views : the official journal of the Gulf Heart Association. https://pmc.ncbi.nlm.nih.gov/articles/PMC5686931/ <BR>
+
+
+</font>
+
+---
+
+class: center, middle
+
+# Q & A
+
+
+---
+
+# Credits
+
+<font size = 6>
+
+- Josie Gallop, Slides 1 - 12, 32 <BR>
+<BR>
+- Ava Destefano, Slides 13 - 23 <BR>
+<BR>
+- Chloe Winters, Slides 24- 31 <BR>
+<BR>
+</font>
+
+
+---
+name: Thank you
+class: inverse1 center, middle
+
+# Thank you!
+
+Slides created using R packages:
+
+[**xaringan**](https://github.com/yihui/xaringan)<br>
+[**gadenbuie/xaringanthemer**](https://github.com/gadenbuie/xaringanthemer)<br>
+[**knitr**](http://yihui.name/knitr)<br>
+[**R Markdown**](https://rmarkdown.rstudio.com)<br>
+via <br>
+[**RStudio Desktop**](https://posit.co/download/rstudio-desktop/)
+
+
+
+
+
