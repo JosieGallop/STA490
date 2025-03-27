@@ -1,0 +1,753 @@
+---
+title: "Random Sampling for U.S Bank Loans"
+subtitle: '<img src="https://chloewinters79.github.io/STA490/Image/WCU.png" width=120 height=120>'
+author: 
+  - "Josie Gallop, Chloe Winters, Ava Destefano"
+date: '`r Sys.Date()`'
+output:
+  xaringan::moon_reader:
+    css: "https://chloewinters79.github.io/STA490/Presentation/Group%20Presentation/xaringan-themer.css"
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: true
+---
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("pander")) {
+   install.packages("pander")
+   library(pander)
+}
+if (!require("psych")) {
+   install.packages("psych")
+   library(psych)
+}
+if (!require("MASS")) {
+   install.packages("MASS")
+   library(MASS)
+}
+
+if (!require("ggplot2")) {
+   install.packages("ggplot2")
+   library(ggplot2)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+   library(tidyverse)
+}
+if(!require("mice")) {
+   install.packages("mice")
+   library(mice)
+}
+knitr::opts_chunk$set(
+                  fig.width=3, 
+                  fig.height=3, 
+                  fig.retina=12,
+                  out.width = "100%",
+                  cache = FALSE,
+                  echo = TRUE,
+                  message = FALSE, 
+                  warning = FALSE,
+                  hiline = TRUE
+                  )
+```
+
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+  style_duo_accent(primary_color = "#b988f9",
+          secondary_color = "#f1c0fc",
+          # fonts
+          header_font_google = google_font("Martel"),
+          text_font_google = google_font("Lato"),
+          code_font_google = google_font("Fira Mono"))
+```
+
+
+# Agenda 
+
+<font size = 5>
+
+.pull-left[
+- Introduction
+
+   - Variables
+   
+   - Practical Questions
+   
+- Stratification Variable
+
+- Random Samples
+
+- Calculating Loan Default Rate
+
+- Visual Representation
+
+- Results 
+
+- Conclusion and Recommendations
+]
+<BR>
+<BR>
+</font>
+
+---
+
+# Introduction
+
+<font size = 6>
+
+.pull-left[
+- Data collected from the U.S Small Business Administration. 
+
+- Collected from 1987-2014. 
+
+- 899,164 observations of 27 variables. 
+
+- Each observation is a loan
+
+  ]
+<BR>
+<BR>
+</font>
+
+---
+
+## Variables 
+
+<font size = 5>
+
+.pull-left[
+- LoanNr_ChkDgt
+- Name
+- City
+- State
+- Zip
+- Bank
+- BankState
+- NAICS
+- ApprovalDate
+- ApprovalIFY
+- Term
+- NoEmp
+- NewExist
+- CreateJob
+]
+
+.pull-right[
+- RetainedJob
+- FranchiseCode
+- UrbanRural
+- RevLineCr 
+- LowDoc
+- ChgOffDate 
+- DisbursementDate
+- DisbursementGross
+- BalanceGross
+- MIS_Status
+- ChgOffPrinGr
+- GrAppv
+- SBA_Appv
+    
+]
+
+<BR>
+<BR>
+</font>
+
+---
+
+
+## Practical Qustions
+
+<font size = 6>
+• Which type of sampling plan will perform the best? <BR>
+<BR>
+• How can our stratification variable positively impact the quality of our analysis?  <BR>
+<BR>
+
+</font>
+
+---
+
+## Data Download and Cleaning
+<font size = 6>
+
+• Data is originally nine sets, about 100,000 observations each <BR>
+<BR>
+• Combine into one data set<BR>
+<BR>
+• Deleting observations where MIS_Status is missing leaves us with 899,023 observations <BR>
+<BR>
+• Made clusters for sampling later
+<BR?>
+
+</font>
+
+
+```{r echo=FALSE, results='hide'}
+loan01 = read.csv("https://raw.githubusercontent.com/AvaDeSt/bank_data/refs/heads/main/w06-SBAnational01.csv", header = TRUE)[, -1]
+loan02 = read.csv("https://raw.githubusercontent.com/AvaDeSt/bank_data/refs/heads/main/w06-SBAnational02.csv", header = TRUE)[, -1]
+loan03 = read.csv("https://raw.githubusercontent.com/AvaDeSt/bank_data/refs/heads/main/w06-SBAnational03.csv", header = TRUE)[, -1]
+loan04 = read.csv("https://raw.githubusercontent.com/AvaDeSt/bank_data/refs/heads/main/w06-SBAnational04.csv", header = TRUE)[, -1]
+loan05 = read.csv("https://raw.githubusercontent.com/AvaDeSt/bank_data/refs/heads/main/w06-SBAnational05.csv", header = TRUE)[, -1]
+loan06 = read.csv("https://raw.githubusercontent.com/AvaDeSt/bank_data/refs/heads/main/w06-SBAnational06.csv", header = TRUE)[, -1]
+loan07 = read.csv("https://raw.githubusercontent.com/AvaDeSt/bank_data/refs/heads/main/w06-SBAnational07.csv", header = TRUE)[, -1]
+loan08 = read.csv("https://raw.githubusercontent.com/AvaDeSt/bank_data/refs/heads/main/w06-SBAnational08.csv", header = TRUE)[, -1]
+loan09 = read.csv("https://raw.githubusercontent.com/AvaDeSt/bank_data/refs/heads/main/w06-SBAnational09.csv", header = TRUE)[, -1]
+loan = rbind(loan01, loan02, loan03, loan04, loan05, loan06, loan07, loan08, loan09)
+```
+
+
+```{r echo=FALSE}
+loans <- na.omit(loan[!is.na(loan$MIS_Status), ])
+```
+
+---
+
+## Statification Variable 
+<font size = 6>
+
+• Each state will be grouped into one of 5 regions in the United States <BR>
+<BR>
+• Midwest, Northeast, South, Southeast, and West <BR>
+<BR>
+• This new Stratification variable called 'Region' will be added to our data set <BR>
+<BR>
+
+</font>
+
+
+```{r echo=FALSE}
+state_to_region <- c(
+  'AL' = 'Southeast', 'AK' = 'West', 'AZ' = 'West', 'AR' = 'Southeast', 'CA' = 'West',
+  'CO' = 'West', 'CT' = 'Northeast', 'DC' = 'Northeast', 'DE' = 'Northeast', 'FL' = 'Southeast',
+  'GA' = 'Southeast', 'HI' = 'West', 'ID' = 'West', 'IL' = 'Midwest', 'IN' = 'Midwest',
+  'IA' = 'Midwest', 'KS' = 'Midwest', 'KY' = 'Southeast', 'LA' = 'South', 'ME' = 'Northeast',
+  'MD' = 'Northeast', 'MA' = 'Northeast', 'MI' = 'Midwest', 'MN' = 'Midwest',
+  'MS' = 'Southeast', 'MO' = 'Midwest', 'MT' = 'West', 'NE' = 'Midwest', 'NV' = 'West',
+  'NH' = 'Northeast', 'NJ' = 'Northeast', 'NM' = 'West', 'NY' = 'Northeast',
+  'NC' = 'Southeast', 'ND' = 'Midwest', 'OH' = 'Midwest', 'OK' = 'South', 'OR' = 'West',
+  'PA' = 'Northeast', 'RI' = 'Northeast', 'SC' = 'Southeast', 'SD' = 'Midwest', 'TN' = 'South',
+  'TX' = 'South', 'UT' = 'West', 'VT' = 'Northeast', 'VA' = 'South', 'WA' = 'West',
+  'WV' = 'Southeast', 'WI' = 'Midwest', 'WY' = 'West'
+)
+
+loans <- loans %>%
+  mutate(Region = state_to_region[State])
+```
+
+
+```{r echo=FALSE, fig.align='center', out.width = '800px'}
+southeast <- filter(loans, Region == "Southeast")
+
+northeast <- filter(loans, Region == "Northeast")
+
+midwest <- filter(loans, Region == "Midwest")
+
+south <- filter(loans, Region == "South")
+
+west <- filter(loans, Region == "West")
+
+freq.table = table(loans$Region)
+kable(t(freq.table)) 
+```
+
+
+<!-- Start of Josie's Slides  -->
+
+
+---
+# Loan Default Rates
+
+<font size = 5> 
+• We will calculate the loan default rates for the 5 regions <BR>
+<BR>
+• Midwest has the lowest default rate <BR>
+<BR>
+• Southeast has the highest default rate <BR>
+<BR>
+
+</font>
+
+
+
+```{r echo=FALSE, results='hide'}
+x.table = table(loans$Region, loans$MIS_Status)
+no.lab = x.table[,1]      # first column consists of unknown default label
+default = x.table[,2]
+no.default = x.table[,3]
+default.rate = round(100*default/(default+no.default),1)
+default.status.rate = cbind(no.lab = no.lab, 
+                          default = default, 
+                          no.default = no.default,
+                          default.rate=default.rate)
+# kable(default.status.rate)
+```
+
+
+```{r echo=FALSE}
+kable(default.status.rate)
+```
+
+
+
+
+
+---
+# Simple Random Sampling 
+
+<font size = 6>
+• We will begin with a simple random sample <BR>
+<BR>
+• We have a sample size of 3,000 with 29 variables <BR>
+<BR>
+
+</font>
+
+```{r echo=FALSE, results='hide'}
+loans$sampling.frame = 1:length(loans$GrAppv)   # sampling list
+# names(study.pop)                                      # checking the sampling list variable
+sampled.list = sample(1:length(loans$GrAppv), 3000) # sampling the list
+SRS.sample = loans[sampled.list,]                   # extract the sampling units (observations)
+## dimension check
+dim(SRS.sample)
+```
+
+---
+# SRS Default Rates
+
+<font size = 6>
+• Overall close default rates to population <BR>
+<BR>
+•  The SRS sampling process gave close default rates <BR>
+<BR>
+
+</font>
+
+```{r echo=FALSE, results='hide'}
+x.table = table(SRS.sample$Region, SRS.sample$MIS_Status)
+no.lab.srs = x.table[,1]      
+default.srs = x.table[,2]
+no.default.srs = x.table[,3]
+default.rate.srs = round(100*default.srs/(default.srs+no.default.srs),1)
+##
+Region.code = names(default.rate.srs)    
+Region.name=c("Midwest", "Northeast", "Southeast", "West", "South")  
+default.rate.pop = default.rate[Region.code]
+
+SRS.pop.rates = cbind(default.rate.pop,default.rate.srs)
+rownames(SRS.pop.rates) = Region.name
+# kable(SRS.pop.rates, caption="Comparison of Region-specific default rates between population and the SRS.")
+```
+
+
+```{r echo = FALSE}
+kable(SRS.pop.rates, caption="Comparison of Region-specific default rates 
+                               between population and the SRS.")
+```
+
+
+---
+# Systematic Random Sample
+
+<font size = 6>
+• We will next take a systematic random sample <BR>
+<BR>
+•  Once again, we will use a sample size of 3,000 <BR>
+<BR>
+•  We actually have a size of 3,007 because of the jump size rounding up <BR>
+
+</font>
+
+```{r echo=FALSE, results='hide'}
+jump.size = dim(loans)[1]%/%3000 
+# jump.size
+rand.starting.pt=sample(1:jump.size,1) # find the random starting value
+sampling.id = seq(rand.starting.pt, dim(loans)[1], jump.size)  # sampling ID
+#length(sampling.id)
+sys.sample=loans[sampling.id,]    # extract the sampling units of systematic samples
+dim(sys.sample)
+```
+
+---
+# Systematic Default Rates
+
+<font size = 6>
+• Similar to SRS, the default rates are close to the population <BR>
+<BR>
+• The systematic sample did well with the default rates <BR>
+<BR>
+
+</font>
+
+
+
+```{r echo=FALSE, results='hide'}
+desired_order <- c("Midwest", "Northeast", "South", "Southeast", "West")
+sys.sample$Region <- factor(sys.sample$Region, levels = desired_order)
+x.table = table(sys.sample$Region, sys.sample$MIS_Status)
+no.lab.sys = x.table[,1]      
+default.sys = x.table[,2]
+no.default.sys = x.table[,3]
+default.rate.sys = round(100*default.sys/(default.sys+no.default.sys),1)
+sys.SRS.pop.rates = cbind(default.rate.pop, default.rate.srs, default.rate.sys)
+rownames(sys.SRS.pop.rates) = desired_order
+#kable(sys.SRS.pop.rates, caption="Comparison of Region-specific default rates between population, SRS, and Systematic Sample.")
+```
+
+```{r echo = FALSE}
+kable(sys.SRS.pop.rates, caption="Comparison of Region-specific default rates between population, SRS, and Systematic Sample.")
+```
+
+
+---
+# Stratified Random Sample
+
+<font size = 6>
+• We will take a stratified random sample based on the region variable  <BR>
+<BR>
+• Midwest: strata size of 676 <BR>
+<BR>
+• Northeast: strata size of 681 <BR>
+<BR>
+• South: strata size of 376 <BR>
+<BR>
+• Southeast: strata size of 390 <BR>
+<BR>
+• West: strata size of 878 <BR>
+<BR>
+
+
+</font>
+
+```{r echo = FALSE, results='hide'}
+freq.table = table(loans$Region)  
+rel.freq = freq.table/sum(freq.table)  
+strata.size = round(rel.freq*3000)     
+strata.names=names(strata.size)       
+
+kable(t(strata.size))
+```
+
+
+```{r echo = FALSE, results='hide'}
+strata.sample = loans[1,]    
+strata.sample$add.id = 1   
+                          
+for (i in 1:length(strata.names)){
+   ith.strata.names = strata.names[i]   
+   ith.strata.size = strata.size[i]     
+   
+   ith.sampling.id = which(loans$Region==ith.strata.names) 
+   ith.strata = loans[ith.sampling.id,]  
+   ith.strata$add.id = 1:dim(ith.strata)[1]  
+
+   ith.sampling.id = sample(1:dim(ith.strata)[1], ith.strata.size) 
+
+   ith.sample =ith.strata[ith.strata$add.id %in%ith.sampling.id,]
+  
+   strata.sample = rbind(strata.sample, ith.sample) 
+ }
+
+ strat.sample.final = strata.sample[-1,]
+```
+
+
+
+---
+# Cluster Sample
+
+<font size = 6>
+• Lastly, we will take a cluster sample <BR>
+<BR>
+• The clusters will be based on ZIP code <BR>
+<BR>
+• Default rate = total defaults / total loans <BR>
+<BR>
+
+
+</font>
+
+
+```{r echo = FALSE, results='hide'}
+set.seed(123)
+
+unique_zip <- unique(loans$Zip)
+
+selected_clusters <- sample(unique_zip, 20) 
+
+sampled_data <- loans %>%
+  filter(Zip %in% selected_clusters)
+
+head(sampled_data)
+
+sample_default_rates_cluster <- sampled_data %>%
+  group_by(Region) %>%
+  summarise(
+    total_loans = n(),
+    total_defaults = sum(MIS_Status == "CHGOFF", na.rm = TRUE),
+    sample_default_rate = total_defaults / total_loans
+  )
+
+```
+
+
+
+---
+# Stratified and Cluster Default Rates
+
+<font size = 6>
+• The stratified sample default rates are very close to the population <BR>
+<BR>
+•  The cluster default rates are not close to the population <BR>
+<BR>
+
+
+</font>
+
+
+```{r echo=FALSE, results='hide'}
+
+x.table = table(strat.sample.final$Region, strat.sample.final$MIS_Status)
+no.lab.str = x.table[,1]      
+default.str = x.table[,2]
+no.default.str = x.table[,3]
+default.rate.str = round(100*default.str/(default.str+no.default.str),1)
+str.SRS.pop.rates = cbind(default.rate.pop, default.rate.srs, default.rate.sys, default.rate.str)
+
+
+# Table for Cluster Sample
+x.table.cluster = table(sampled_data$Region, sampled_data$MIS_Status)
+no.lab.cluster = x.table.cluster[,1]      
+default.cluster = x.table.cluster[,2]
+no.default.cluster = x.table.cluster[,3]
+default.rate.cluster = round(100 * default.cluster / (default.cluster + no.default.cluster), 1)
+
+# Combine all sampling methods including Cluster
+str.SRS.pop.rates = cbind(default.rate.pop, default.rate.srs, default.rate.sys, default.rate.str, default.rate.cluster)
+rownames(str.SRS.pop.rates) = Region.name
+
+# Output updated table with Cluster Sample included
+#kable(str.SRS.pop.rates, caption="Comparison of Region-specific default rates between Population, SRS, Systematic Sample, Stratified Sample, and Cluster Sample.")
+```
+
+
+```{r echo=FALSE}
+kable(str.SRS.pop.rates, caption="Comparison of Region-specific default rates between Population, SRS, Systematic Sample, Stratified Sample, and Cluster Sample.")
+```
+
+
+---
+# Discussion of Default Rates
+
+<font size = 6>
+• The cluster sample was furthest from the population <BR>
+<BR>
+•  Stratified was the closest to the population <BR>
+<BR>
+•  SRS and systematic were close but not as close as stratified <BR>
+<BR>
+•  Stratified seems like the best process <BR>
+<BR>
+
+
+</font>
+
+
+
+<!-- Start of Chloes Slides  -->
+
+---
+
+class:inverse middle center
+name:Visual
+
+# Visual Representation
+
+
+---
+
+.pull-center[
+  ![](https://chloewinters79.github.io/STA490/Image/Cluster%20Graph.png){.stretch}
+]
+
+
+```{r, echo=FALSE, results='hide'}
+# n=length(default.rate.pop)
+
+# plot(NULL, xlim=c(0,n), ylim=c(8, 30), xlab="Regions", ylab ="Default Rate", axes=FALSE)
+# title("Comparison of Region-specific Default Rates from Different Samples")
+
+# points(1:n, as.vector(default.rate.pop), pch=16, col=3, cex = 0.8)
+# lines(1:n, as.vector(default.rate.pop), lty=1, col=3, cex = 0.8)
+
+# points(1:n, as.vector(default.rate.srs), pch=17, col=4, cex = 0.8)
+# lines(1:n, as.vector(default.rate.srs), lty=2, col=4, cex = 0.8)
+
+# points(1:n, as.vector(default.rate.sys), pch=19, col=5, cex = 0.8)
+# lines(1:n, as.vector(default.rate.sys), lty=3, col=5, cex = 0.8)
+
+# points(1:n, as.vector(default.rate.str), pch=20, col=6, cex = 0.8)
+# lines(1:n, as.vector(default.rate.str), lty=4, col=6, cex = 0.8)
+
+# points(1:n, as.vector(sample_default_rates_cluster$sample_default_rate) * 100, 
+#        pch=15, col=2, cex = 0.8)
+
+# lines(1:n, as.vector(sample_default_rates_cluster$sample_default_rate) * 100, 
+#       lty=5, col=2, lwd=2)
+
+# axis(1, at=1:n, label=Region.code, las = 2)
+# axis(2)
+
+# rowMax = apply(str.SRS.pop.rates, 1, max) # max default rate in each industry
+# segments(1:n, rep(0,n), 1:n, rowMax, lty=2, col="lightgray", lwd = 0.5)
+
+# Update Legend to include Cluster Sample
+# legend("topright", c("Population", "Simple", "Systematic", "Stratified", "Cluster"), 
+#        lty=1:5, col=c(3,4,5,6,2), pch=c(16,17,19,20,15), cex=0.6, bty="n")
+
+```
+
+
+
+---
+
+# Visual Representation Discussion
+
+<font size = 6>
+• Compare population default to sample default rates  <BR>
+<BR>
+• Cluster seems to be the most different from the population <BR>
+<BR>
+• Stratified seem to be the most similar to the population <BR>
+<BR>
+• While closer than Cluster, Simple and Systematic are not as similar to the population as Stratified <BR>
+<BR>
+
+</font>
+
+---
+
+class:inverse middle center
+name:general
+
+
+# Results
+
+---
+
+# Average Difference From Population
+
+<font size = 6>
+• Simple Random Sample: 1.14 <BR>
+<BR>
+• Systematic Sample: 1.24 <BR>
+<BR>
+• Stratified Sample: 0.7  <BR>
+<BR>
+• Cluster Sample: 5.32  <BR>
+<BR>
+</font>
+
+---
+
+# Average Loan Default Rate
+
+<font size=6>
+
+.pull-left[
+**Regions With Cluster Sample**  
+- Midwest: 17.78  
+- Northeast: 14.78  
+- South: 19.32  
+- Southeast: 21  
+- West: 17.2  
+]
+
+.pull-right[
+**Regions Without Cluster Sample**  
+- Midwest: 15.975  
+- Northeast: 15.925  
+- South: 19  
+- Southeast: 22.925  
+- West: 17.275  
+]
+
+</font>
+
+---
+
+# Final Results
+
+<font size = 6>
+• It appears that the sample closest to the population is stratified. <BR>
+<BR>
+• Based on the comparison of numerical rates and the graph. <BR>
+<BR>
+• The other samples do have their benefits. <BR>
+<BR>
+</font>
+
+---
+
+class:inverse middle center
+name:general
+
+
+# Conclusion & Recommendations
+
+---
+
+# Conclusion & Recommendations
+
+
+<font size = 6>
+• Stratified is the best sample based on our analysis  <BR>
+<BR>
+• However, depending on the goals and resources other samples may be preferred <BR>
+<BR>
+• Simple and Systematic were still very close to the population <BR>
+<BR>
+• Based on its difference from the population, it is recommended to avoid Cluster <BR>
+<BR>
+
+</font>
+
+
+---
+
+class: inverse center middle
+
+# Q & A
+
+
+
+---
+name: Thank you
+class: inverse center middle
+
+# Thank you!
+
+Slides created using R packages:
+
+[**xaringan**](https://github.com/yihui/xaringan)<br>
+[**gadenbuie/xaringanthemer**](https://github.com/gadenbuie/xaringanthemer)<br>
+[**knitr**](http://yihui.name/knitr)<br>
+[**R Markdown**](https://rmarkdown.rstudio.com)<br>
+via <br>
+[**RStudio Desktop**](https://posit.co/download/rstudio-desktop/)
+
+
+
+
+
+
